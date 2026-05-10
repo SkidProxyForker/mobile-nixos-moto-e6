@@ -1,0 +1,61 @@
+name: Build Mobile NixOS — Moto E6
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            extra-platforms = aarch64-linux
+            experimental-features = nix-command flakes
+            system-features = nixos-test benchmark big-parallel kvm
+
+      - name: Set up Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: ${{ secrets.CACHIX_CACHE_NAME }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Clone mobile-nixos
+        run: |
+          git clone --depth 1 \
+            https://github.com/mobile-nixos/mobile-nixos \
+            /tmp/mobile-nixos
+
+      - name: Inject device config
+        run: |
+          cp -r motorola-surfna /tmp/mobile-nixos/devices/motorola-surfna
+
+      - name: Build
+        run: |
+          cd /tmp/mobile-nixos
+          nix-build \
+            --argstr device motorola-surfna \
+            -A outputs.default \
+            --keep-going \
+            --show-trace \
+            -o result
+
+      - name: Upload images
+        uses: actions/upload-artifact@v4
+        with:
+          name: moto-e6-nixos-${{ github.sha }}
+          path: /tmp/mobile-nixos/result/
+          retention-days: 30
+          if-no-files-found: error
