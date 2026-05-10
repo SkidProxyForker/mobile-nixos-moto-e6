@@ -34,10 +34,9 @@ jobs:
  
       - name: Clone mobile-nixos
         run: |
-          git clone \
+          git clone --depth 1 \
             https://github.com/mobile-nixos/mobile-nixos \
             /tmp/mobile-nixos
-          cd /tmp/mobile-nixos && git checkout 7a1adb97d88dfd9a48fb42b9edfbd47d28bbc736
  
       - name: Inject device config
         run: |
@@ -61,3 +60,4 @@ jobs:
           retention-days: 30
           if-no-files-found: error
  
+
